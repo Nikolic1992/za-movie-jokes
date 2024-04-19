@@ -30,7 +30,7 @@ function MoviesList() {
   } else if (isError) {
     content = (
       <Flex alignItems="center" justifyContent="center" minH="100vh">
-        {error?.data?.status_message ?? "Something went wrong"}
+        {error}
       </Flex>
     );
   }
