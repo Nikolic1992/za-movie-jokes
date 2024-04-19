@@ -1,16 +1,14 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { OPENAI_COMPLETIONS_API_URL } from "src/common/constants";
-
 const initialState = {
   rules: [{ name: "Joke Type", description: "Programmer" }],
   jokes: {
-    jokes: [],
+    jokes: {},
     status: "idle", // 'idle' / 'loading' / 'succeeded' / 'failed'
     error: null,
   },
 };
-
 export const fetchJoke = createAsyncThunk(
   "aiJokes/fetchJoke",
   async ({ movieId, movieTitle, movieDescription }, thunkApi) => {
@@ -21,21 +19,18 @@ export const fetchJoke = createAsyncThunk(
       (acc, rule) => `${acc}${rule.name}: ${rule.description}\n`,
       ""
     );
-
     const messages = [
       {
         role: "user",
         content: `Movie Title: ${movieTitle}, Movie Descreption: ${movieDescription}, ${rulesParams} Joke:`,
       },
     ];
-
     if (joke) {
       messages.unshift({
         role: "user",
         content: `Don't use joke: ${joke.joke}`,
       });
     }
-
     const response = await axios.post(
       OPENAI_COMPLETIONS_API_URL,
       {
@@ -48,7 +43,6 @@ export const fetchJoke = createAsyncThunk(
         },
       }
     );
-
     return { movieId, joke: response.data.choices[0].message.content };
   }
 );
@@ -78,15 +72,7 @@ const aiJokesSlice = createSlice({
       })
       .addCase(fetchJoke.fulfilled, (state, action) => {
         state.jokes.status = "succeeded";
-        const jokeIndex = state.jokes.jokes.findIndex(
-          (joke) => joke.movieId === action.payload.movieId
-        );
-
-        if (jokeIndex > -1) {
-          state.jokes.jokes[jokeIndex] = action.payload;
-        } else {
-          state.jokes.jokes.push(action.payload);
-        }
+        state.jokes.jokes[action.payload.movieId] = action.payload.joke;
       })
       .addCase(fetchJoke.rejected, (state, action) => {
         state.jokes.status = "failed";
@@ -94,11 +80,10 @@ const aiJokesSlice = createSlice({
       });
   },
 });
-
 export const { ruleAdded, ruleRemoved } = aiJokesSlice.actions;
 
 export const selectJokeByMovieId = (state, movieId) =>
-  state.aiJokes.jokes.jokes.find((joke) => joke.movieId === movieId);
+  state.aiJokes.jokes.jokes[movieId];
 export const selectJokesStatus = (state) => state.aiJokes.jokes.status;
 export const selectJokesRules = (state) => state.aiJokes.rules;
 

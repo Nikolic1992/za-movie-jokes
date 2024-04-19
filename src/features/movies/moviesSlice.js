@@ -1,17 +1,23 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createEntityAdapter,
+  createSlice,
+} from "@reduxjs/toolkit";
 import { fetchPopularMovies } from "./api";
 
-const initialState = {
-  movies: [],
+const moviesAdapter = createEntityAdapter({
+  sortComparer: (movieA, movieB) => movieB.vote_average - movieA.vote_average,
+});
+
+const initialState = moviesAdapter.getInitialState({
   status: "idle", // 'idle' / 'loading' / 'succeeded' / 'failed'
   error: null,
-};
+});
 
 export const fetchMovies = createAsyncThunk("movies/fetchMovies", async () => {
   const data = await fetchPopularMovies();
   return data.data;
 });
-
 const moviesSlice = createSlice({
   name: "movies",
   initialState,
@@ -23,7 +29,7 @@ const moviesSlice = createSlice({
       })
       .addCase(fetchMovies.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.movies = action.payload.results;
+        moviesAdapter.setMany(state, action.payload.results);
       })
       .addCase(fetchMovies.rejected, (state, action) => {
         state.status = "failed";
@@ -32,10 +38,9 @@ const moviesSlice = createSlice({
   },
 });
 
-export const selectAllMovies = (state) => state.movies.movies;
+export const { selectAll: selectAllMovies, selectById: selectMovieById } =
+  moviesAdapter.getSelectors((state) => state.movies);
 export const selectMoviesStatus = (state) => state.movies.status;
 export const selectMoviesError = (state) => state.movies.error;
-export const selectMovieById = (state, movieId) =>
-  state.movies.movies.find((movie) => movie.id === Number(movieId));
 
 export default moviesSlice.reducer;
